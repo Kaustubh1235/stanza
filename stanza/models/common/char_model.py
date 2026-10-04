@@ -120,6 +120,12 @@ def build_charlm_vocab(path, cutoff=0):
 CHARLM_START = "\n"
 CHARLM_END = " "
 
+# U+F06C is a Private Use Area glyph found in some crawled text
+BHO_TABLE = str.maketrans({
+    "\uF06C": None,
+    "\N{DEVANAGARI SIGN CANDRABINDU}": "\N{DEVANAGARI SIGN ANUSVARA}",
+})
+
 class Preprocessing(Enum):
     NONE = "none"
     BHO = "bho"
@@ -139,10 +145,8 @@ class Preprocessing(Enum):
         if self is Preprocessing.NONE:
             return word
         if self is Preprocessing.BHO:
-            candidate = word.replace("\uF06C", "")
-            if not candidate:
-                return word
-            return candidate.replace("\N{DEVANAGARI SIGN CANDRABINDU}", "\N{DEVANAGARI SIGN ANUSVARA}")
+            candidate = word.translate(BHO_TABLE)
+            return candidate if candidate else word
         raise ValueError("Unknown Preprocessing type: %s" % self.name)
 
 class CharacterLanguageModel(nn.Module):
