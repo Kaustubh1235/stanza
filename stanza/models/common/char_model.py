@@ -138,15 +138,15 @@ class Preprocessing(Enum):
                     return member
         return None   # falls through to the normal ValueError
 
-    def preprocess(self, word):
-        if not word:
-            return word
+    def preprocess(self, text):
+        if not text:
+            return text
 
         if self is Preprocessing.NONE:
-            return word
+            return text
         if self is Preprocessing.BHO:
-            candidate = word.translate(BHO_TABLE)
-            return candidate if candidate else word
+            candidate = text.translate(BHO_TABLE)
+            return candidate if candidate else text
         raise ValueError("Unknown Preprocessing type: %s" % self.name)
 
 class CharacterLanguageModel(nn.Module):
@@ -175,6 +175,9 @@ class CharacterLanguageModel(nn.Module):
 
         # alternate methods
         self.preprocessing = args.get('preprocessing', Preprocessing.NONE)
+
+    def preprocess(self, text):
+        return self.preprocessing.preprocess(text)
 
     def forward(self, chars, charlens, hidden=None):
         chars = self.char_dropout(chars)

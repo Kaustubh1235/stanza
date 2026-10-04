@@ -45,23 +45,24 @@ def get_batch(source, i, seq_len):
     target = source[:, i+1:i+1+seq_len].reshape(-1)
     return data, target
 
-def load_file(filename, vocab, direction):
+def load_file(filename, model, vocab, direction):
     with utils.open_read_text(filename) as fin:
         data = fin.read()
+        data = model.preprocess(data)
 
     idx = vocab['char'].map(data)
     if direction == 'backward': idx = idx[::-1]
     return torch.tensor(idx)
 
-def load_data(path, vocab, direction):
+def load_data(path, model, vocab, direction):
     if os.path.isdir(path):
         filenames = sorted(os.listdir(path))
         for filename in filenames:
             logger.info('Loading data from {}'.format(filename))
-            data = load_file(os.path.join(path, filename), vocab, direction)
+            data = load_file(os.path.join(path, filename), model, vocab, direction)
             yield data
     else:
-        data = load_file(path, vocab, direction)
+        data = load_file(path, model, vocab, direction)
         yield data
 
 def build_argparse():
@@ -266,8 +267,8 @@ def train(args):
             train_path = args['train_dir']
         else:
             train_path = args['train_file']
-        train_data = load_data(train_path, vocab, args['direction'])
-        dev_data = load_file(args['eval_file'], vocab, args['direction']) # dev must be a single file
+        train_data = load_data(train_path, trainer.model, vocab, args['direction'])
+        dev_data = load_file(args['eval_file'], trainer.model, vocab, args['direction']) # dev must be a single file
 
         # run over entire training set
         for data_chunk in train_data:
@@ -343,7 +344,7 @@ def evaluate(args):
 
     model = CharacterLanguageModel.load(model_file).to(args['device'])
     vocab = model.vocab
-    data = load_data(args['eval_file'], vocab, args['direction'])
+    data = load_data(args['eval_file'], model, vocab, args['direction'])
     criterion = torch.nn.CrossEntropyLoss()
     
     loss = evaluate_epoch(args, vocab, data, model, criterion)
